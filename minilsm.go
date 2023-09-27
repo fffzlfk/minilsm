@@ -36,4 +36,12 @@ func (si *StorageInner) Get(key []byte) []byte {
 			return val
 		}
 	}
+
+	// TODO: get from sstable
+	// iterators := make([]iterator.Iterator, 0, len(si.l0SSTables))
+	// for _, t := range si.l0SSTables {
+	// 	iterators = append(iterators)
+	// }
+
+	return nil
 }
