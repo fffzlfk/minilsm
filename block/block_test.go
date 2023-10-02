@@ -2,6 +2,7 @@ package block
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,4 +87,21 @@ func TestBlock_Iter_SeekToKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("key1"), iter.key)
 	assert.Equal(t, []byte("value1"), iter.value)
+}
+
+func generateBlockMeta() []*Meta {
+	res := make([]*Meta, 0, 100)
+	for i := 0; i < 100; i++ {
+		key := []byte("key" + strconv.Itoa(i))
+		res = append(res, NewBlockMeta(uint32(i), key))
+	}
+	return res
+}
+
+func TestBlockMeta_Encode_Decode(t *testing.T) {
+	bms := generateBlockMeta()
+	raw := EncodeBlockMeta(bms)
+	got, err := DecodeBlockMeta(raw)
+	assert.NoError(t, err)
+	assert.Equal(t, bms, got)
 }

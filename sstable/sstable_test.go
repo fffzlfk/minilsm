@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"minilsm/block"
 	"os"
+	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,8 +37,8 @@ func TestTableBuilder_Add(t *testing.T) {
 
 }
 
-func generateTable(t *testing.T, blockSize uint16) *Table {
-	tb := NewTableBuilder(blockSize)
+func TestSSTable_Build(t *testing.T) {
+	tb := NewTableBuilder(1024)
 	tests := []struct {
 		giveKey []byte
 		giveVal []byte
@@ -73,15 +75,57 @@ func generateTable(t *testing.T, blockSize uint16) *Table {
 			}
 		})
 	}
-	sst, err := tb.Build(1, nil, "test.sst")
+	_, err := tb.Build(0, nil, "test.sst")
+	defer os.Remove("test.sst")
+	assert.NoError(t, err)
+}
+
+func generateSSTble(t *testing.T, pairs []struct {
+	K []byte
+	V []byte
+}, blockSize uint16, path string) *Table {
+	tb := NewTableBuilder(blockSize)
+	for _, pair := range pairs {
+		assert.NoError(t, tb.Add(pair.K, pair.V))
+	}
+	sst, err := tb.Build(1, &sync.Map{}, path)
 	assert.NoError(t, err)
 	return sst
 }
 
-func TestSSTableBuilder(t *testing.T) {
-	generateTable(t, 100)
+func generatePairs(n int) []struct {
+	K []byte
+	V []byte
+} {
+	pairs := make([]struct {
+		K []byte
+		V []byte
+	}, 0, n)
+	for i := 0; i < n; i++ {
+		pairs = append(pairs, struct {
+			K []byte
+			V []byte
+		}{[]byte("key" + strconv.Itoa(i)), []byte("value" + strconv.Itoa(i))})
+	}
+	return pairs
+}
+
+func TestSSTable_Decode(t *testing.T) {
+	pairs := generatePairs(1000)
+	sst := generateSSTble(t, pairs, 1024, "test.sst")
 	defer os.Remove("test.sst")
-	contents, err := os.ReadFile("./test.sst")
+	defer sst.Close()
+
+	nsst, err := openTableFromFile(1, &sync.Map{}, sst.fd)
 	assert.NoError(t, err)
-	t.Log(string(contents))
+	assert.Equal(t, sst.metas, nsst.metas)
+}
+
+func TestSSTable_SeekToFirst(t *testing.T) {
+	pairs := generatePairs(1000)
+	sst := generateSSTble(t, pairs, 1024, "test.sst")
+	defer os.Remove("test.sst")
+	defer sst.Close()
+
+	// iter := sst.New
 }

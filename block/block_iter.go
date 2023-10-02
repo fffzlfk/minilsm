@@ -41,6 +41,22 @@ func NewBlockIter(block *Block) *Iter {
 	}
 }
 
+func NewBlockIterAndSeekToFirst(block *Block) (*Iter, error) {
+	iter := NewBlockIter(block)
+	if err := iter.seekTo(0); err != nil {
+		return nil, fmt.Errorf("new block iter and seek to first: %w", err)
+	}
+	return iter, nil
+}
+
+func NewBlockIterAndSeekToKey(block *Block, key []byte) (*Iter, error) {
+	iter := NewBlockIter(block)
+	if err := iter.SeekToKey(key); err != nil {
+		return nil, fmt.Errorf("new block iter and seek to key: %w", err)
+	}
+	return iter, nil
+}
+
 func (i *Iter) seekTo(index int) error {
 	if index >= len(i.block.offsets) {
 		return errors.New("seek to invalid index")

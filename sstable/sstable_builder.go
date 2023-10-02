@@ -1,7 +1,6 @@
 package sstable
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -78,12 +77,9 @@ func (tb *TableBulder) Build(id uint32, cache *sync.Map, path string) (*Table, e
 		}
 	}
 
-	metaDataBuf := bytes.Buffer{}
-	for _, meta := range tb.metas {
-		metaDataBuf.Write(meta.Encode())
-	}
-	n, err := fd.Write(metaDataBuf.Bytes())
-	if n != len(metaDataBuf.Bytes()) {
+	metaData := block.EncodeBlockMeta(tb.metas)
+	n, err := fd.Write(metaData[:])
+	if n != len(metaData) {
 		return nil, errBuildInternalWriteError
 	}
 	if err != nil {
