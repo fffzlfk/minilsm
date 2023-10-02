@@ -14,6 +14,11 @@ func (b *Block) bytesSize() uint16 {
 	return sizeOfUint16 + uint16(len(b.offsets))*sizeOfUint16 + sizeOfUint16 + uint16(len(b.data))
 }
 
+// +--------+--------+--------+-----+--------+-------------+-------+
+// | number | offset | offset | ... | offset | data length | data  |
+// +--------+--------+--------+-----+--------+-------------+-------+
+// | uint16 | uint16 | uint16 | ... | uint16 |   uint16    | bytes |
+// +--------+--------+--------+-----+--------+-------------+-------+
 func (b *Block) Encode() []byte {
 	buf := make([]byte, b.bytesSize())
 	idx := uint16(0)

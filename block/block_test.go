@@ -78,3 +78,12 @@ func TestBlock_Encode_Decode(t *testing.T) {
 
 	assert.Equal(t, b, b2)
 }
+
+func TestBlock_Iter_SeekToKey(t *testing.T) {
+	b := generateBlock(t, 100)
+	iter := NewBlockIter(b)
+	err := iter.SeekToKey([]byte("key1"))
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("key1"), iter.key)
+	assert.Equal(t, []byte("value1"), iter.value)
+}

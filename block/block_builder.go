@@ -40,6 +40,11 @@ var (
 	ErrBlockFull  = errors.New("block is full")
 )
 
+// +----------+-------+------------+-------+
+// | key size |  key  | value size | value |
+// +----------+-------+------------+-------+
+// | uint16   | bytes |  uint16    | bytes |
+// +----------+-------+------------+-------+
 func (b *Builder) Add(key, value []byte) error {
 	if len(key) == 0 {
 		return ErrKeyEmpty
