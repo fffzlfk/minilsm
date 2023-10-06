@@ -1,9 +1,11 @@
 package sstable
 
 import (
+	"bytes"
 	"fmt"
 	"minilsm/block"
 	"os"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -127,5 +129,34 @@ func TestSSTable_SeekToFirst(t *testing.T) {
 	defer os.Remove("test.sst")
 	defer sst.Close()
 
-	// iter := sst.New
+	iter, err := NewIterAndSeekToFirst(sst)
+	assert.NoError(t, err)
+	for i := 0; i < 1000; i++ {
+		assert.True(t, iter.IsValid())
+		assert.Equal(t, pairs[i].K, iter.Key())
+		assert.Equal(t, pairs[i].V, iter.Value())
+		iter.Next()
+	}
+	assert.False(t, iter.IsValid())
+}
+
+func TestSSTable_SeekToKet(t *testing.T) {
+	pairs := generatePairs(1000)
+	slices.SortFunc(pairs, func(a, b struct {
+		K []byte
+		V []byte
+	}) int {
+		return bytes.Compare(a.K, b.K)
+	})
+	sst := generateSSTble(t, pairs, 1024, "test.sst")
+	defer os.Remove("test.sst")
+	defer sst.Close()
+
+	for i := 0; i < 1000; i++ {
+		iter, err := NewIterAndSeekToKey(sst, pairs[i].K)
+		assert.NoError(t, err)
+		assert.True(t, iter.IsValid())
+		assert.Equal(t, pairs[i].K, iter.Key())
+		assert.Equal(t, pairs[i].V, iter.Value())
+	}
 }

@@ -39,6 +39,7 @@ func (tb *TableBulder) Add(key, value []byte) (err error) {
 			if tb.Add(key, value) != nil {
 				log.Fatal("tablebuilder add: %v", err)
 			}
+			tb.firstKey = util.DeepCopySlice(key)
 		} else {
 			return fmt.Errorf("tablebuilder add: %w", err)
 		}

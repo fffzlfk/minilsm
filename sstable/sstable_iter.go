@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"minilsm/block"
 	"minilsm/iterator"
+	"minilsm/log"
 )
 
 type Iter struct {
@@ -13,23 +14,37 @@ type Iter struct {
 }
 
 // IsValid implements iterator.Iterator.
-func (*Iter) IsValid() bool {
-	panic("unimplemented")
+func (i *Iter) IsValid() bool {
+	return i.blockIter.IsValid()
 }
 
 // Key implements iterator.Iterator.
-func (*Iter) Key() []byte {
-	panic("unimplemented")
+func (i *Iter) Key() []byte {
+	return i.blockIter.Key()
 }
 
 // Next implements iterator.Iterator.
-func (*Iter) Next() {
-	panic("unimplemented")
+func (i *Iter) Next() {
+	i.blockIter.Next()
+	if !i.blockIter.IsValid() {
+		i.blockIdx++
+		if i.blockIdx < i.table.Len() {
+			blk, err := i.table.ReadBlockCached(i.blockIdx)
+			if err != nil {
+				log.Error("next: %v", err)
+			}
+			iter, err := block.NewBlockIterAndSeekToFirst(blk)
+			if err != nil {
+				log.Error("next: %v", err)
+			}
+			i.blockIter = iter
+		}
+	}
 }
 
 // Value implements iterator.Iterator.
-func (*Iter) Value() []byte {
-	panic("unimplemented")
+func (i *Iter) Value() []byte {
+	return i.blockIter.Value()
 }
 
 var _ iterator.Iterator = (*Iter)(nil)

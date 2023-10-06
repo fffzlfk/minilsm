@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"minilsm/log"
 )
 
 type Iter struct {
@@ -23,15 +24,18 @@ func (i *Iter) Value() []byte {
 }
 
 func (i *Iter) IsValid() bool {
-	return i != nil && i.block != nil && len(i.key) > 0
+	return i != nil && i.block != nil && len(i.key) > 0 && i.idx < len(i.block.offsets)
 }
 
 func (i *Iter) Next() {
-	if i.block != nil {
+	if i.block == nil {
 		return
 	}
 	i.idx++
-	i.seekTo(i.idx)
+	if err := i.seekTo(i.idx); err != nil {
+		log.Info("block iter next: %v", err)
+		return
+	}
 }
 
 func NewBlockIter(block *Block) *Iter {
@@ -86,16 +90,19 @@ func (i *Iter) SeekToKey(key []byte) error {
 	if len(key) <= 0 {
 		return errors.New("seek to key: empty key")
 	}
-	l, r := 0, len(i.block.offsets)-1
+	l, r := 0, len(i.block.offsets)
 	for l < r {
-		mid := l + (r-l+1)/2
+		mid := l + (r-l)/2
 		if err := i.seekTo(mid); err != nil {
 			return fmt.Errorf("seek to key: %w", err)
 		}
-		if bytes.Compare(key, i.key) < 0 {
-			r = mid - 1
-		} else {
-			l = mid
+		switch bytes.Compare(i.key, key) {
+		case -1:
+			l = mid + 1
+		case 0:
+			return nil
+		case 1:
+			r = mid
 		}
 	}
 	if err := i.seekTo(l); err != nil {
