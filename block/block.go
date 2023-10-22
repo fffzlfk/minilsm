@@ -11,7 +11,7 @@ type Block struct {
 }
 
 func (b *Block) bytesSize() uint16 {
-	return sizeOfUint16 + uint16(len(b.offsets))*sizeOfUint16 + sizeOfUint16 + uint16(len(b.data))
+	return SizeOfUint16 + uint16(len(b.offsets))*SizeOfUint16 + SizeOfUint16 + uint16(len(b.data))
 }
 
 // +--------+--------+--------+-----+--------+-------------+-------+
@@ -23,13 +23,13 @@ func (b *Block) Encode() []byte {
 	buf := make([]byte, b.bytesSize())
 	idx := uint16(0)
 	binary.LittleEndian.PutUint16(buf, uint16(len(b.offsets)))
-	idx += sizeOfUint16
+	idx += SizeOfUint16
 	for _, offest := range b.offsets {
-		binary.LittleEndian.PutUint16(buf[idx:idx+sizeOfUint16], offest)
-		idx += sizeOfUint16
+		binary.LittleEndian.PutUint16(buf[idx:idx+SizeOfUint16], offest)
+		idx += SizeOfUint16
 	}
-	binary.LittleEndian.PutUint16(buf[idx:idx+sizeOfUint16], uint16(len(b.data)))
-	idx += sizeOfUint16
+	binary.LittleEndian.PutUint16(buf[idx:idx+SizeOfUint16], uint16(len(b.data)))
+	idx += SizeOfUint16
 	idx += uint16(copy(buf[idx:], b.data))
 	return buf
 }
@@ -37,23 +37,23 @@ func (b *Block) Encode() []byte {
 var errDataTooShort = errors.New("binary data is too short")
 
 func (b *Block) Decode(data []byte) error {
-	if len(data) < sizeOfUint16 {
+	if len(data) < SizeOfUint16 {
 		return errDataTooShort
 	}
 	idx := 0
-	offsetsLen := binary.LittleEndian.Uint16(data[idx : idx+sizeOfUint16])
-	idx += sizeOfUint16
-	if len(data) < idx+int(offsetsLen*sizeOfUint16) {
+	offsetsLen := binary.LittleEndian.Uint16(data[idx : idx+SizeOfUint16])
+	idx += SizeOfUint16
+	if len(data) < idx+int(offsetsLen*SizeOfUint16) {
 		return errDataTooShort
 	}
 	offsets := make([]uint16, offsetsLen)
 	for i := 0; i < int(offsetsLen); i++ {
-		offsets[i] = binary.LittleEndian.Uint16(data[idx : idx+sizeOfUint16])
-		idx += sizeOfUint16
+		offsets[i] = binary.LittleEndian.Uint16(data[idx : idx+SizeOfUint16])
+		idx += SizeOfUint16
 	}
 	b.offsets = offsets
-	dataLen := binary.LittleEndian.Uint16(data[idx : idx+sizeOfUint16])
-	idx += sizeOfUint16
+	dataLen := binary.LittleEndian.Uint16(data[idx : idx+SizeOfUint16])
+	idx += SizeOfUint16
 	if len(data) < idx+int(dataLen) {
 		return errDataTooShort
 	}

@@ -23,10 +23,10 @@ func NewBlockMeta(offset uint32, firstKey []byte) *Meta {
 }
 
 func (m *Meta) encode() []byte {
-	buf := make([]byte, SizeOfUint32+sizeOfUint16+len(m.FirstKey))
+	buf := make([]byte, SizeOfUint32+SizeOfUint16+len(m.FirstKey))
 	binary.LittleEndian.PutUint32(buf[:SizeOfUint32], m.Offset)
-	binary.LittleEndian.PutUint16(buf[SizeOfUint32:SizeOfUint32+sizeOfUint16], uint16(len(m.FirstKey)))
-	copy(buf[SizeOfUint32+sizeOfUint16:], m.FirstKey)
+	binary.LittleEndian.PutUint16(buf[SizeOfUint32:SizeOfUint32+SizeOfUint16], uint16(len(m.FirstKey)))
+	copy(buf[SizeOfUint32+SizeOfUint16:], m.FirstKey)
 	return buf
 }
 
@@ -60,7 +60,7 @@ func decodeBlock(r io.Reader) (*Meta, error) {
 	}
 	offset := binary.LittleEndian.Uint32(buf)
 
-	buf = make([]byte, sizeOfUint16)
+	buf = make([]byte, SizeOfUint16)
 	n, err = r.Read(buf)
 	if err := decodeBlockErrorHandle(err, n, buf); err != nil {
 		return nil, err

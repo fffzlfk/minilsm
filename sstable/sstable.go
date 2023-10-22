@@ -118,3 +118,7 @@ func (t *Table) FindBlockIdx(key []byte) uint32 {
 	}
 	return t.Len() - 1
 }
+
+func (t *Table) SSTID() uint32 {
+	return t.id
+}

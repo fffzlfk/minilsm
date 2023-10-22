@@ -68,7 +68,7 @@ func NewIterAndSeekToFirst(table *Table) (*Iter, error) {
 func NewIterAndSeekToKey(table *Table, key []byte) (*Iter, error) {
 	blkIdx, iter, err := seekToKey(table, key)
 	if err != nil {
-		return nil, fmt.Errorf("new block iter and seek to key: %w", err)
+		return nil, fmt.Errorf("new sstable iter and seek to key: %w", err)
 	}
 	return &Iter{
 		table:     table,

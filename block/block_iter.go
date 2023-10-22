@@ -61,12 +61,16 @@ func NewBlockIterAndSeekToKey(block *Block, key []byte) (*Iter, error) {
 	return iter, nil
 }
 
+var ErrKeyNotFound = errors.New("key not found")
+
 func (i *Iter) seekTo(index int) error {
 	if index >= len(i.block.offsets) {
-		return errors.New("seek to invalid index")
+		log.Info("seek to: invalid index")
+		return errors.New("seek to: invalid index")
 	}
 	offset := i.block.offsets[index]
 	i.seekToOffset(offset)
+	i.idx = index
 	return nil
 }
 
@@ -75,13 +79,13 @@ func (i *Iter) seekToOffset(offset uint16) error {
 		return errors.New("seek to invalid offset")
 	}
 	entry := i.block.data[offset:]
-	ks := binary.LittleEndian.Uint16(entry[:sizeOfUint16])
+	ks := binary.LittleEndian.Uint16(entry[:SizeOfUint16])
 	key := make([]byte, ks)
-	copy(key, entry[sizeOfUint16:])
+	copy(key, entry[SizeOfUint16:])
 	i.key = key
-	vs := binary.LittleEndian.Uint16(entry[sizeOfUint16+ks:])
+	vs := binary.LittleEndian.Uint16(entry[SizeOfUint16+ks:])
 	value := make([]byte, vs)
-	copy(value, entry[sizeOfUint16+ks+sizeOfUint16:])
+	copy(value, entry[SizeOfUint16+ks+SizeOfUint16:])
 	i.value = value
 	return nil
 }
@@ -94,7 +98,7 @@ func (i *Iter) SeekToKey(key []byte) error {
 	for l < r {
 		mid := l + (r-l)/2
 		if err := i.seekTo(mid); err != nil {
-			return fmt.Errorf("seek to key: %w", err)
+			return fmt.Errorf("2 seek to key: %w", err)
 		}
 		switch bytes.Compare(i.key, key) {
 		case -1:
@@ -106,7 +110,7 @@ func (i *Iter) SeekToKey(key []byte) error {
 		}
 	}
 	if err := i.seekTo(l); err != nil {
-		return fmt.Errorf("seek to key: %w", err)
+		return fmt.Errorf("seek to key: %w", ErrKeyNotFound)
 	}
 	return nil
 }

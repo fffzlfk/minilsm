@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"minilsm/block"
+	"minilsm/util"
 	"os"
 	"slices"
-	"strconv"
 	"sync"
 	"testing"
 
@@ -95,25 +95,8 @@ func generateSSTble(t *testing.T, pairs []struct {
 	return sst
 }
 
-func generatePairs(n int) []struct {
-	K []byte
-	V []byte
-} {
-	pairs := make([]struct {
-		K []byte
-		V []byte
-	}, 0, n)
-	for i := 0; i < n; i++ {
-		pairs = append(pairs, struct {
-			K []byte
-			V []byte
-		}{[]byte("key" + strconv.Itoa(i)), []byte("value" + strconv.Itoa(i))})
-	}
-	return pairs
-}
-
 func TestSSTable_Decode(t *testing.T) {
-	pairs := generatePairs(1000)
+	pairs := util.GeneratePairs(1000)
 	sst := generateSSTble(t, pairs, 1024, "test.sst")
 	defer os.Remove("test.sst")
 	defer sst.Close()
@@ -124,7 +107,7 @@ func TestSSTable_Decode(t *testing.T) {
 }
 
 func TestSSTable_SeekToFirst(t *testing.T) {
-	pairs := generatePairs(1000)
+	pairs := util.GeneratePairs(1000)
 	sst := generateSSTble(t, pairs, 1024, "test.sst")
 	defer os.Remove("test.sst")
 	defer sst.Close()
@@ -141,7 +124,7 @@ func TestSSTable_SeekToFirst(t *testing.T) {
 }
 
 func TestSSTable_SeekToKet(t *testing.T) {
-	pairs := generatePairs(1000)
+	pairs := util.GeneratePairs(1000)
 	slices.SortFunc(pairs, func(a, b struct {
 		K []byte
 		V []byte

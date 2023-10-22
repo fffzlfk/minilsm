@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	sizeOfUint16 = 2
+	SizeOfUint16 = 2
 )
 
 type Builder struct {
@@ -27,7 +27,7 @@ func NewBlockBuilder(size uint16) *Builder {
 }
 
 func estimateGrow(key, value []byte) uint16 {
-	return uint16(len(key)) + uint16(len(value)) + sizeOfUint16*2 + sizeOfUint16 // kLen | key | vLen | value | offset
+	return uint16(len(key)) + uint16(len(value)) + SizeOfUint16*2 + SizeOfUint16 // kLen | key | vLen | value | offset
 }
 
 func (b *Builder) IsEmpty() bool {
@@ -59,11 +59,11 @@ func (b *Builder) Add(key, value []byte) error {
 
 	b.offsets = append(b.offsets, b.dataCursor)
 
-	binary.LittleEndian.PutUint16(b.data[b.dataCursor:b.dataCursor+sizeOfUint16], uint16(len(key)))
-	b.dataCursor += sizeOfUint16
+	binary.LittleEndian.PutUint16(b.data[b.dataCursor:b.dataCursor+SizeOfUint16], uint16(len(key)))
+	b.dataCursor += SizeOfUint16
 	b.dataCursor += uint16(copy(b.data[b.dataCursor:], key))
-	binary.LittleEndian.PutUint16(b.data[b.dataCursor:b.dataCursor+sizeOfUint16], uint16(len(value)))
-	b.dataCursor += sizeOfUint16
+	binary.LittleEndian.PutUint16(b.data[b.dataCursor:b.dataCursor+SizeOfUint16], uint16(len(value)))
+	b.dataCursor += SizeOfUint16
 	b.dataCursor += uint16(copy(b.data[b.dataCursor:], value))
 
 	return nil

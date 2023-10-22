@@ -2,8 +2,10 @@ package memtable
 
 import (
 	"errors"
+	"fmt"
 	"minilsm/config"
 	"minilsm/log"
+	"minilsm/sstable"
 	"minilsm/util"
 	"sync"
 
@@ -69,4 +71,23 @@ func (t *Table) Scan(lower, upper []byte) (*Iterator, error) {
 		ele: head,
 		end: upper,
 	}, nil
+}
+
+func (t *Table) Flush(builder *sstable.TableBulder) error {
+	head := t.sl.Front()
+	if head == nil {
+		return errors.New("memtable flush: table is empty")
+	}
+	for {
+		err := builder.Add(head.Key().([]byte), head.Value.([]byte))
+		if err != nil {
+			return fmt.Errorf("memtable flush: %w", err)
+		}
+		next := head.Next()
+		if next == nil {
+			break
+		}
+		head = next
+	}
+	return nil
 }
