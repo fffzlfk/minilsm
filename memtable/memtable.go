@@ -8,18 +8,16 @@ import (
 	"minilsm/sstable"
 	"minilsm/util"
 	"sync"
-
-	"github.com/huandu/skiplist"
 )
 
 type Table struct {
 	mu sync.RWMutex
-	sl *skiplist.SkipList
+	sl *SkipList[string, []byte]
 }
 
 func NewTable() *Table {
 	return &Table{
-		sl: skiplist.New(skiplist.Bytes),
+		sl: NewSkipList[string, []byte](),
 	}
 }
 
@@ -30,11 +28,7 @@ func (t *Table) Get(key []byte) (val []byte, ok bool) {
 		log.Error("memtable get: key cannot be empty")
 		return nil, false
 	}
-	v, ok := t.sl.GetValue(key)
-	if !ok {
-		return nil, false
-	}
-	val, ok = v.([]byte)
+	val, ok = t.sl.Search(string(key))
 	if !ok {
 		return nil, false
 	}
@@ -53,7 +47,7 @@ func (t *Table) Put(key, value []byte) bool {
 		log.Error("memtable put: key is too long")
 		return false
 	}
-	t.sl.Set(util.DeepCopySlice(key), util.DeepCopySlice(value))
+	t.sl.Insert(string(key), util.DeepCopySlice(value))
 	return true
 }
 
@@ -66,7 +60,7 @@ func (t *Table) Scan(lower, upper []byte) (*Iterator, error) {
 	if len(upper) == 0 {
 		return nil, errors.New("memtable scan: upper cannot be empty")
 	}
-	head := t.sl.Find(lower)
+	head, _ := t.sl.find(string(lower))
 	return &Iterator{
 		ele: head,
 		end: upper,
@@ -74,20 +68,25 @@ func (t *Table) Scan(lower, upper []byte) (*Iterator, error) {
 }
 
 func (t *Table) Flush(builder *sstable.TableBulder) error {
-	head := t.sl.Front()
+	head := t.sl.head
 	if head == nil {
 		return errors.New("memtable flush: table is empty")
 	}
+	current := head.forwards[0]
+	if current == nil {
+		return errors.New("memtable flush: table is empty")
+	}
+
 	for {
-		err := builder.Add(head.Key().([]byte), head.Value.([]byte))
+		err := builder.Add([]byte(current.key), current.value)
 		if err != nil {
 			return fmt.Errorf("memtable flush: %w", err)
 		}
-		next := head.Next()
+		next := current.forwards[0]
 		if next == nil {
 			break
 		}
-		head = next
+		current = next
 	}
 	return nil
 }
