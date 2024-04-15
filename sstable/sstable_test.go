@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"minilsm/block"
 	"minilsm/util"
-	"os"
 	"slices"
 	"sync"
 	"testing"
@@ -36,7 +35,6 @@ func TestTableBuilder_Add(t *testing.T) {
 			assert.Equal(t, tt.wantErr, err)
 		})
 	}
-
 }
 
 func TestSSTable_Build(t *testing.T) {
@@ -68,7 +66,7 @@ func TestSSTable_Build(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(string(tt.giveKey)+":"+string(tt.giveVal), func(t *testing.T) {
+		t.Run("Add: "+string(tt.giveKey)+":"+string(tt.giveVal), func(t *testing.T) {
 			err := tb.Add(tt.giveKey, tt.giveVal)
 			if err == nil {
 				assert.Equal(t, tt.want, nil)
@@ -77,8 +75,11 @@ func TestSSTable_Build(t *testing.T) {
 			}
 		})
 	}
-	_, err := tb.Build(0, nil, "test.sst")
-	defer os.Remove("test.sst")
+	tempDir := t.TempDir()
+	sst, err := tb.Build(0, nil, tempDir+"/test.sst")
+	t.Cleanup(func() {
+		sst.Close()
+	})
 	assert.NoError(t, err)
 }
 
@@ -97,9 +98,11 @@ func generateSSTble(t *testing.T, pairs []struct {
 
 func TestSSTable_Decode(t *testing.T) {
 	pairs := util.GeneratePairs(1000)
-	sst := generateSSTble(t, pairs, 1024, "test.sst")
-	defer os.Remove("test.sst")
-	defer sst.Close()
+	tempDir := t.TempDir()
+	sst := generateSSTble(t, pairs, 1024, tempDir+"/test.sst")
+	t.Cleanup(func() {
+		sst.Close()
+	})
 
 	nsst, err := openTableFromFile(1, &sync.Map{}, sst.fd)
 	assert.NoError(t, err)
@@ -108,9 +111,11 @@ func TestSSTable_Decode(t *testing.T) {
 
 func TestSSTable_SeekToFirst(t *testing.T) {
 	pairs := util.GeneratePairs(1000)
-	sst := generateSSTble(t, pairs, 1024, "test.sst")
-	defer os.Remove("test.sst")
-	defer sst.Close()
+	tempDir := t.TempDir()
+	sst := generateSSTble(t, pairs, 1024, tempDir+"/test.sst")
+	t.Cleanup(func() {
+		sst.Close()
+	})
 
 	iter, err := NewIterAndSeekToFirst(sst)
 	assert.NoError(t, err)
@@ -131,9 +136,11 @@ func TestSSTable_SeekToKet(t *testing.T) {
 	}) int {
 		return bytes.Compare(a.K, b.K)
 	})
-	sst := generateSSTble(t, pairs, 1024, "test.sst")
-	defer os.Remove("test.sst")
-	defer sst.Close()
+	tempDir := t.TempDir()
+	sst := generateSSTble(t, pairs, 1024, tempDir+"/test.sst")
+	t.Cleanup(func() {
+		sst.Close()
+	})
 
 	for i := 0; i < 1000; i++ {
 		iter, err := NewIterAndSeekToKey(sst, pairs[i].K)

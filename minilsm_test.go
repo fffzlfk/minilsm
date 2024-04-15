@@ -10,6 +10,11 @@ import (
 func TestInternalStorage(t *testing.T) {
 	path := t.TempDir()
 	si := NewStorageInner(path)
+	t.Cleanup(func() {
+		for _, sst := range si.l0SSTables {
+			sst.Close()
+		}
+	})
 
 	kvs := util.GeneratePairs(1000)
 
