@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"minilsm/log"
+	"minilsm/logger"
 )
+
+var log = logger.GetLogger()
 
 type Iter struct {
 	block *Block
@@ -33,7 +35,7 @@ func (i *Iter) Next() {
 	}
 	i.idx++
 	if err := i.seekTo(i.idx); err != nil {
-		log.Info("block iter next: %v", err)
+		log.Infof("block iter next: %v", err)
 		return
 	}
 }

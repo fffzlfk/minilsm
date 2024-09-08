@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"minilsm/block"
 	"minilsm/iterator"
-	"minilsm/log"
+	"minilsm/logger"
 	"minilsm/memtable"
 	"minilsm/sstable"
 	"os"
@@ -16,6 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 )
+
+var log = logger.GetLogger()
 
 type StorageInner struct {
 	mu sync.RWMutex
@@ -32,9 +34,15 @@ type StorageInner struct {
 	nextSSTableID uint32
 	path          string
 	blockCache    *sync.Map
+
+	shouldClose chan struct{}
+	isClosed    chan struct{}
 }
 
 func (si *StorageInner) Get(key []byte) ([]byte, error) {
+	si.mu.RLock()
+	defer si.mu.RUnlock()
+
 	val, ok := si.memTable.Get(key)
 	if ok {
 		return val, nil
@@ -50,7 +58,10 @@ func (si *StorageInner) Get(key []byte) ([]byte, error) {
 	for _, t := range si.l0SSTables {
 		iter, err := sstable.NewIterAndSeekToKey(t, key)
 		if err != nil {
-			return nil, fmt.Errorf("get: %w", err)
+			if errors.Is(err, block.ErrKeyNotFound) {
+				continue
+			}
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 		iterators = append(iterators, iter)
 	}
@@ -64,7 +75,9 @@ func (si *StorageInner) Get(key []byte) ([]byte, error) {
 }
 
 func (si *StorageInner) Put(key, value []byte) bool {
+	si.mu.RLock()
 	ok := si.memTable.Put(key, value)
+	si.mu.RUnlock()
 	if ok {
 		atomic.AddUint64(&si.memTableKeyCount, 1)
 		estimateSize := block.SizeOfUint16*2 + len(key) + len(value) + block.SizeOfUint16
@@ -118,6 +131,9 @@ func (si *StorageInner) newMemTable() {
 }
 
 func (si *StorageInner) checkIfImmMemTableShouldFlushToSSTable() bool {
+	si.mu.RLock()
+	defer si.mu.RUnlock()
+
 	return len(si.immMemTables) > 0
 }
 
@@ -128,6 +144,10 @@ func (si *StorageInner) sstPath(id uint32) string {
 func (si *StorageInner) sinkImmMemTableToSSTable() error {
 	si.mu.Lock()
 	defer si.mu.Unlock()
+
+	if len(si.immMemTables) == 0 {
+		return nil
+	}
 
 	sstID := si.nextSSTableID
 	flushMemTable := si.immMemTables[len(si.immMemTables)-1]
@@ -150,11 +170,14 @@ func (si *StorageInner) sinkImmMemTableToSSTable() error {
 }
 
 func (si *StorageInner) checkIfSSTShouldBeCompact() bool {
+	si.mu.RLock()
+	defer si.mu.RUnlock()
+
 	return len(si.l0SSTables) >= 2
 }
 
 func (si *StorageInner) compactSSTs() error {
-	log.Info("compact with l0SSTables: %d\n", len(si.l0SSTables))
+	log.Infof("compact with l0SSTables: %v", len(si.l0SSTables))
 	if len(si.l0SSTables) >= 2 {
 		si.mu.RLock()
 		l0SSTableLength := len(si.l0SSTables)
@@ -215,14 +238,31 @@ func (si *StorageInner) internalLoopTask() {
 			log.Info("start to sink immutable memtable to sstable\n")
 			err := si.sinkImmMemTableToSSTable()
 			if err != nil {
-				log.Error("internalLoopTask: %v", err)
+				log.Errorf("internalLoopTask: ", err)
 			}
 		}
 
 		if si.checkIfSSTShouldBeCompact() {
 			si.compactSSTs()
 		}
+
+		select {
+		case <-si.shouldClose:
+			for _, sst := range si.l0SSTables {
+				sst.Close()
+			}
+			ticker.Stop()
+			si.isClosed <- struct{}{}
+			return
+		default:
+			continue
+		}
 	}
+}
+
+func (si *StorageInner) Close() {
+	si.shouldClose <- struct{}{}
+	<-si.isClosed
 }
 
 func NewStorageInner(path string) *StorageInner {
@@ -234,6 +274,8 @@ func NewStorageInner(path string) *StorageInner {
 		nextSSTableID: 1,
 		path:          path,
 		blockCache:    &sync.Map{},
+		shouldClose:   make(chan struct{}, 1),
+		isClosed:      make(chan struct{}),
 	}
 	go si.internalLoopTask()
 	return si

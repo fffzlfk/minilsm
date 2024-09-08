@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"minilsm/block"
-	"minilsm/log"
+	"minilsm/logger"
 	"minilsm/util"
 	"os"
 	"sync"
 )
+
+var log = logger.GetLogger()
 
 type TableBulder struct {
 	builder   *block.Builder
@@ -37,7 +39,7 @@ func (tb *TableBulder) Add(key, value []byte) (err error) {
 		if errors.Is(err, block.ErrBlockFull) {
 			tb.finishBlock()
 			if tb.Add(key, value) != nil {
-				log.Fatal("tablebuilder add: %v", err)
+				panic(fmt.Errorf("tablebuilder add: %w", err))
 			}
 			tb.firstKey = util.DeepCopySlice(key)
 		} else {

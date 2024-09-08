@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"minilsm/block"
 	"minilsm/iterator"
-	"minilsm/log"
 )
 
 type Iter struct {
@@ -31,11 +30,11 @@ func (i *Iter) Next() {
 		if i.blockIdx < i.table.Len() {
 			blk, err := i.table.ReadBlockCached(i.blockIdx)
 			if err != nil {
-				log.Error("next: %v", err)
+				log.Errorf("next: %v", err)
 			}
 			iter, err := block.NewBlockIterAndSeekToFirst(blk)
 			if err != nil {
-				log.Error("next: %v", err)
+				log.Errorf("next: %v", err)
 			}
 			i.blockIter = iter
 		}
@@ -79,7 +78,10 @@ func NewIterAndSeekToKey(table *Table, key []byte) (*Iter, error) {
 
 func seekToKey(t *Table, key []byte) (uint32, *block.Iter, error) {
 	blkIdx := t.FindBlockIdx(key)
-	blk, err := t.ReadBlockCached(blkIdx)
+	if blkIdx < 0 {
+		return 0, nil, fmt.Errorf("seek to key: %w", block.ErrKeyNotFound)
+	}
+	blk, err := t.ReadBlockCached(uint32(blkIdx))
 	if err != nil {
 		return 0, nil, fmt.Errorf("seek to key: %w", err)
 	}
@@ -89,5 +91,5 @@ func seekToKey(t *Table, key []byte) (uint32, *block.Iter, error) {
 		return 0, nil, fmt.Errorf("seek to key: %w", err)
 	}
 
-	return blkIdx, blkIter, nil
+	return uint32(blkIdx), blkIter, nil
 }

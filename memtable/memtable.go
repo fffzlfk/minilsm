@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"minilsm/config"
-	"minilsm/log"
+	"minilsm/logger"
 	"minilsm/sstable"
 	"minilsm/util"
 	"sync"
 )
+
+var log = logger.GetLogger()
 
 type Table struct {
 	mu sync.RWMutex

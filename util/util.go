@@ -1,7 +1,7 @@
 package util
 
 import (
-	"strconv"
+	"fmt"
 )
 
 func DeepCopySlice[T any](in []T) (out []T) {
@@ -18,6 +18,7 @@ func GeneratePairs(n int) []struct {
 		K []byte
 		V []byte
 	}, 0, n)
+
 	for i := 0; i < n; i++ {
 		pairs = append(pairs, struct {
 			K []byte
@@ -28,9 +29,9 @@ func GeneratePairs(n int) []struct {
 }
 
 func KeyOf(i int) []byte {
-	return []byte("key" + strconv.Itoa(i))
+	return []byte(fmt.Sprintf("key-%05d", i))
 }
 
 func ValueOf(i int) []byte {
-	return []byte("value" + strconv.Itoa(i))
+	return []byte(fmt.Sprintf("value-%05d", i))
 }

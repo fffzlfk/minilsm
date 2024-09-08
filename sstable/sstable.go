@@ -110,13 +110,13 @@ func (t *Table) Len() uint32 {
 	return uint32(len(t.metas))
 }
 
-func (t *Table) FindBlockIdx(key []byte) uint32 {
+func (t *Table) FindBlockIdx(key []byte) int {
 	for i := uint32(0); i < t.Len(); i++ {
 		if bytes.Compare(t.metas[i].FirstKey, key) > 0 {
-			return i - 1
+			return int(i) - 1
 		}
 	}
-	return t.Len() - 1
+	return int(t.Len()) - 1
 }
 
 func (t *Table) SSTID() uint32 {

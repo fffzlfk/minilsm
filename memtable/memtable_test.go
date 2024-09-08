@@ -1,7 +1,9 @@
 package memtable
 
 import (
+	"minilsm/util"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,4 +64,23 @@ func TestMemtable_Iter(t *testing.T) {
 	assert.Equal(t, []byte("5"), iter.Key())
 	iter.Next()
 	assert.Nil(t, iter.Key())
+}
+
+func TestMemtable_ConcurrentAccess(t *testing.T) {
+	mt := NewTable()
+	var wg sync.WaitGroup
+
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+
+		go func(i int) {
+			defer wg.Done()
+			mt.Put(util.KeyOf(i), util.ValueOf(i))
+			got, ok := mt.Get(util.KeyOf(i))
+			assert.True(t, ok)
+			assert.Equal(t, util.ValueOf(i), got)
+		}(i)
+	}
+
+	wg.Wait()
 }
